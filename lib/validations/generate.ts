@@ -177,6 +177,46 @@ export const TEMPLATES_LABELS: Record<string, string> = {
   minimalista: 'Minimalista',
 }
 
+// === Modo Advanced / Expert constants ===
+
+export const PUBLICOS = ['iniciantes', 'intermediarios', 'experts', 'geral'] as const
+
+export const PUBLICOS_LABELS: Record<string, string> = {
+  iniciantes: 'Iniciantes',
+  intermediarios: 'Intermediários',
+  experts: 'Experts / Avançados',
+  geral: 'Geral (todos os níveis)',
+}
+
+export const TONS = ['serio', 'conversacional', 'cru', 'epico', 'provocativo'] as const
+
+export const TONS_LABELS: Record<string, string> = {
+  serio: 'Sério / Jornalístico',
+  conversacional: 'Conversacional',
+  cru: 'Cru / Sem filtro',
+  epico: 'Épico / Grandiosa',
+  provocativo: 'Provocativo',
+}
+
+export const OBJETIVOS = ['educar', 'entreter', 'inspirar', 'provocar'] as const
+
+export const OBJETIVOS_LABELS: Record<string, string> = {
+  educar: 'Educar',
+  entreter: 'Entreter',
+  inspirar: 'Inspirar',
+  provocar: 'Provocar reflexão',
+}
+
+export const NIVEIS_VOCABULARIO = ['simples', 'intermediario', 'avancado'] as const
+
+export const NIVEIS_VOCABULARIO_LABELS: Record<string, string> = {
+  simples: 'Simples (acessível)',
+  intermediario: 'Intermediário',
+  avancado: 'Avançado (técnico)',
+}
+
+// === Schemas ===
+
 export const quickGenerateSchema = z.object({
   mode: z.literal('quick'),
   inputs: z.object({
@@ -189,4 +229,47 @@ export const quickGenerateSchema = z.object({
   template: z.enum(TEMPLATES).default('padrao'),
 })
 
+export const advancedGenerateSchema = z.object({
+  mode: z.literal('advanced'),
+  inputs: z.object({
+    titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+    duracao: z.number().refine((v) => DURACOES.includes(v as typeof DURACOES[number]), {
+      message: 'Duração inválida',
+    }),
+    nicho: z.enum(NICHOS),
+    publico: z.enum(PUBLICOS),
+    tom: z.enum(TONS),
+    objetivo: z.enum(OBJETIVOS),
+  }),
+  template: z.enum(TEMPLATES).default('padrao'),
+})
+
+export const expertGenerateSchema = z.object({
+  mode: z.literal('expert'),
+  inputs: z.object({
+    titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+    duracao: z.number().refine((v) => DURACOES.includes(v as typeof DURACOES[number]), {
+      message: 'Duração inválida',
+    }),
+    nicho: z.enum(NICHOS),
+    publico: z.enum(PUBLICOS),
+    tom: z.enum(TONS),
+    objetivo: z.enum(OBJETIVOS),
+    autores_referencia: z.string().optional().default(''),
+    nivel_vocabulario: z.enum(NIVEIS_VOCABULARIO).optional().default('intermediario'),
+    instrucoes_custom: z.string().optional().default(''),
+    referencias_texto: z.string().optional().default(''),
+  }),
+  template: z.enum(TEMPLATES).default('padrao'),
+})
+
+export const generateSchema = z.discriminatedUnion('mode', [
+  quickGenerateSchema,
+  advancedGenerateSchema,
+  expertGenerateSchema,
+])
+
 export type QuickGenerateInput = z.infer<typeof quickGenerateSchema>
+export type AdvancedGenerateInput = z.infer<typeof advancedGenerateSchema>
+export type ExpertGenerateInput = z.infer<typeof expertGenerateSchema>
+export type GenerateInput = z.infer<typeof generateSchema>

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { buildSystemPrompt } from '@/lib/prompts/system-prompt'
 import { buildQuickPrompt } from '@/lib/prompts/modo-quick'
+import { buildAdvancedPrompt } from '@/lib/prompts/modo-advanced'
+import { buildExpertPrompt } from '@/lib/prompts/modo-expert'
 import { generateRoteiroStream } from '@/lib/claude/client'
 import { checkRateLimit, incrementUsage } from '@/lib/rate-limit'
-import { quickGenerateSchema } from '@/lib/validations/generate'
+import { generateSchema } from '@/lib/validations/generate'
 import { calculateCost } from '@/lib/prompts/helpers'
 
 export const maxDuration = 300 // 5 minutes for Vercel
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
-  const parsed = quickGenerateSchema.safeParse(body)
+  const parsed = generateSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Dados inválidos', details: parsed.error.issues },
@@ -59,6 +61,12 @@ export async function POST(req: NextRequest) {
   switch (mode) {
     case 'quick':
       userPrompt = buildQuickPrompt({ ...inputs, template })
+      break
+    case 'advanced':
+      userPrompt = buildAdvancedPrompt({ ...inputs, template })
+      break
+    case 'expert':
+      userPrompt = buildExpertPrompt({ ...inputs, template })
       break
     default:
       return NextResponse.json({ error: 'Modo inválido' }, { status: 400 })

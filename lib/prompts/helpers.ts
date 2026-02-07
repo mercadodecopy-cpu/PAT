@@ -108,6 +108,40 @@ export function getNichoInstructions(nicho: string): string {
   return mappings[nicho] || 'Aplique princípios universais: clareza, especificidade, contraste emocional, e estrutura a serviço do conteúdo.'
 }
 
+export function getTomInstructions(tom: string): string {
+  const mappings: Record<string, string> = {
+    serio: 'Tom SÉRIO e jornalístico. Linguagem neutra, adjetivos mínimos. Frases assertivas, sem floreios.',
+    conversacional: 'Tom CONVERSACIONAL. Linguagem casual mas não desleixada. Fale como se estivesse explicando para um amigo inteligente.',
+    cru: 'Tom CRU e sem filtro. Linguagem direta, frases curtas e impactantes. Pode usar gírias e expressões fortes.',
+    epico: 'Tom ÉPICO e grandiosa. Cadência rítmica, construção de momentum. Linguagem que inspira sem ser pomposa.',
+    provocativo: 'Tom PROVOCATIVO. Perguntas retóricas frequentes. Metáforas poderosas. Desafie o espectador a pensar diferente.',
+  }
+
+  return mappings[tom] || mappings.conversacional
+}
+
+export function getPublicoInstructions(publico: string): string {
+  const mappings: Record<string, string> = {
+    iniciantes: 'Público INICIANTE. Explique conceitos básicos sem ser condescendente. Use analogias simples. Evite jargão técnico.',
+    intermediarios: 'Público INTERMEDIÁRIO. Pode usar terminologia da área. Aprofunde conceitos sem explicar o básico.',
+    experts: 'Público EXPERT. Use linguagem técnica livremente. Foque em nuances, insights avançados e análises profundas.',
+    geral: 'Público GERAL (todos os níveis). Equilibre acessibilidade com profundidade. Explique termos técnicos quando usados.',
+  }
+
+  return mappings[publico] || mappings.geral
+}
+
+export function getObjetivoInstructions(objetivo: string): string {
+  const mappings: Record<string, string> = {
+    educar: 'Objetivo: EDUCAR. Priorize clareza e estrutura lógica. Cada seção deve ensinar algo concreto. Use exemplos práticos.',
+    entreter: 'Objetivo: ENTRETER. Priorize ritmo e engajamento. Use narrativa, humor e surpresa. Mantenha o espectador grudado.',
+    inspirar: 'Objetivo: INSPIRAR. Construa arcos emocionais. Mostre transformação e possibilidade. Termine com call-to-action motivacional.',
+    provocar: 'Objetivo: PROVOCAR. Questione certezas. Apresente paradoxos e contradições. Deixe o espectador com mais perguntas que respostas.',
+  }
+
+  return mappings[objetivo] || mappings.educar
+}
+
 export function calculateCost(tokensInput: number, tokensOutput: number): number {
   // Claude Sonnet 4 pricing
   const inputCostPer1M = 3.0

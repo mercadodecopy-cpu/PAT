@@ -30,17 +30,13 @@ export default function CreatePage() {
           icon={<Star className="h-6 w-6" />}
           title="Modo Advanced"
           description="Completo - Metodo Myke aplicado. Qualidade maxima com 6 inputs."
-          badge="Em breve"
           href="/create/advanced"
-          disabled
         />
         <ModeCard
           icon={<Target className="h-6 w-6" />}
           title="Modo Expert"
           description="Controle total - Customizacao maxima para criadores experientes."
-          badge="Em breve"
           href="/create/expert"
-          disabled
         />
       </div>
     </div>
