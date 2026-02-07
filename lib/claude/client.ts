@@ -1,8 +1,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+function getClient(): Anthropic {
+  const apiKey = process.env.ROTEIRO_ANTHROPIC_KEY
+  if (!apiKey) {
+    throw new Error('ROTEIRO_ANTHROPIC_KEY não configurada no .env.local')
+  }
+  return new Anthropic({ apiKey })
+}
 
 interface GenerateResult {
   content: string
@@ -14,6 +18,8 @@ export async function generateRoteiro(
   systemPrompt: string,
   userPrompt: string
 ): Promise<GenerateResult> {
+  const anthropic = getClient()
+
   const stream = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 8000,
@@ -54,6 +60,8 @@ export function generateRoteiroStream(
   return new ReadableStream({
     async start(controller) {
       try {
+        const anthropic = getClient()
+
         const stream = await anthropic.messages.create({
           model: 'claude-sonnet-4-20250514',
           max_tokens: 8000,
@@ -65,7 +73,6 @@ export function generateRoteiroStream(
         for await (const event of stream) {
           if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
             fullContent += event.delta.text
-            // Send text chunk as SSE
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ type: 'text', text: event.delta.text })}\n\n`)
             )
@@ -78,7 +85,6 @@ export function generateRoteiroStream(
           }
         }
 
-        // Send final metadata
         controller.enqueue(
           encoder.encode(
             `data: ${JSON.stringify({
@@ -91,7 +97,17 @@ export function generateRoteiroStream(
         )
         controller.close()
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Erro desconhecido'
+        let message = error instanceof Error ? error.message : 'Erro desconhecido'
+
+        // Translate common API errors
+        if (message.includes('credit balance is too low')) {
+          message = 'Sem creditos na API Anthropic. Adicione creditos em console.anthropic.com > Plans & Billing.'
+        } else if (message.includes('invalid x-api-key') || message.includes('authentication')) {
+          message = 'Chave da API Anthropic invalida. Verifique ANTHROPIC_API_KEY no .env.local.'
+        } else if (message.includes('rate limit') || message.includes('overloaded')) {
+          message = 'API temporariamente sobrecarregada. Tente novamente em alguns segundos.'
+        }
+
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify({ type: 'error', error: message })}\n\n`)
         )

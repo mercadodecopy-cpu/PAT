@@ -31,26 +31,58 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
+    try {
+      const supabase = createClient()
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+      })
 
-    if (error) {
-      setError(error.message)
+      if (signUpError) {
+        // Translate common errors to Portuguese
+        const errorMessages: Record<string, string> = {
+          'Unable to validate email address: invalid format':
+            'Formato de email invalido. Verifique e tente novamente.',
+          'User already registered':
+            'Este email ja esta cadastrado. Tente fazer login.',
+          'Password should be at least 6 characters':
+            'A senha deve ter no minimo 6 caracteres.',
+          'Email rate limit exceeded':
+            'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+          'Signup requires a valid password':
+            'Insira uma senha valida.',
+        }
+        setError(errorMessages[signUpError.message] || signUpError.message)
+        setLoading(false)
+        return
+      }
+
+      // Check if email confirmation is required
+      if (data?.user?.identities?.length === 0) {
+        setError('Este email ja esta cadastrado. Tente fazer login.')
+        setLoading(false)
+        return
+      }
+
+      // If user was auto-confirmed (no email confirmation required)
+      if (data?.session) {
+        router.push('/create')
+        return
+      }
+
+      setSuccess(true)
+    } catch (err) {
+      setError('Erro inesperado. Tente novamente.')
+      console.error('Signup error:', err)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setSuccess(true)
-    setLoading(false)
   }
 
   const handleGoogleSignup = async () => {
@@ -74,7 +106,10 @@ export default function SignupPage() {
               Verifique sua caixa de entrada e clique no link para ativar sua conta.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
+          <CardContent className="text-center space-y-4">
+            <p className="text-xs text-muted-foreground">
+              Nao recebeu? Verifique sua pasta de spam.
+            </p>
             <Link href="/login" className="text-primary hover:underline text-sm">
               Voltar para o login
             </Link>
@@ -163,7 +198,11 @@ export default function SignupPage() {
               />
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                {error}
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Criando conta...' : 'Criar conta'}

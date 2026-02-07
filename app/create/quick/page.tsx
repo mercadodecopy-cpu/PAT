@@ -10,15 +10,17 @@ import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GeneratingState } from '@/components/GeneratingState'
 import {
-  NICHOS,
   NICHOS_LABELS,
+  NICHO_GROUPS,
   DURACOES,
   DURACOES_LABELS,
   TEMPLATES,
@@ -47,6 +49,8 @@ export default function QuickPage() {
     setIsGenerating(true)
     setStreamedText('')
 
+    let roteiroId: string | null = null
+
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -72,35 +76,38 @@ export default function QuickPage() {
       if (!reader) throw new Error('Stream não disponível')
 
       const decoder = new TextDecoder()
-      let roteiroId: string | null = null
+      let buffer = ''
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const text = decoder.decode(value)
-        const lines = text.split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        // Keep the last potentially incomplete line in the buffer
+        buffer = lines.pop() || ''
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          try {
-            const data = JSON.parse(line.slice(6))
+          const jsonStr = line.slice(6).trim()
+          if (!jsonStr) continue
 
-            if (data.type === 'text') {
-              setStreamedText((prev) => prev + data.text)
-            } else if (data.type === 'error') {
-              throw new Error(data.error)
-            } else if (data.type === 'roteiroId') {
-              roteiroId = data.id
-            }
-          } catch (parseErr) {
-            // Skip unparseable lines
-            if (parseErr instanceof Error && parseErr.message !== line.slice(6)) {
-              // It was a real error thrown above, re-throw
-              if (parseErr.message !== `Unexpected token`) {
-                throw parseErr
-              }
-            }
+          let data: { type: string; text?: string; error?: string; id?: string; content?: string }
+          try {
+            data = JSON.parse(jsonStr)
+          } catch {
+            // Skip unparseable lines (incomplete JSON chunks)
+            continue
+          }
+
+          if (data.type === 'text') {
+            setStreamedText((prev) => prev + data.text)
+          } else if (data.type === 'error') {
+            throw new Error(data.error || 'Erro na geração')
+          } else if (data.type === 'roteiroId') {
+            roteiroId = data.id || null
+          } else if (data.type === 'done') {
+            // Generation complete - roteiroId should already be set
           }
         }
       }
@@ -108,10 +115,16 @@ export default function QuickPage() {
       // Redirect to roteiro page
       if (roteiroId) {
         router.push(`/roteiro/${roteiroId}`)
+      } else {
+        throw new Error('Roteiro gerado mas ID não foi recebido. Verifique seu histórico.')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
-      setIsGenerating(false)
+    } finally {
+      // Always reset generating state (unless we're redirecting)
+      if (!roteiroId) {
+        setIsGenerating(false)
+      }
     }
   }
 
@@ -183,11 +196,16 @@ export default function QuickPage() {
                 <SelectTrigger id="nicho">
                   <SelectValue placeholder="Selecione o nicho" />
                 </SelectTrigger>
-                <SelectContent>
-                  {NICHOS.map((n) => (
-                    <SelectItem key={n} value={n}>
-                      {NICHOS_LABELS[n]}
-                    </SelectItem>
+                <SelectContent className="max-h-80">
+                  {Object.entries(NICHO_GROUPS).map(([groupName, nichos]) => (
+                    <SelectGroup key={groupName}>
+                      <SelectLabel>{groupName}</SelectLabel>
+                      {nichos.map((n) => (
+                        <SelectItem key={n} value={n}>
+                          {NICHOS_LABELS[n]}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>

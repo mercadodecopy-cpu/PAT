@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Download, ArrowLeft, Check, Clock, Cpu, FileText } from 'lucide-react'
+import { Copy, Download, ArrowLeft, Check, Clock, Cpu, FileText, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { TEMPLATES_LABELS, NICHOS_LABELS } from '@/lib/validations/generate'
 import type { Roteiro } from '@/types/database.types'
 
 interface RoteiroDisplayProps {
@@ -65,11 +66,13 @@ export function RoteiroDisplay({ roteiro }: RoteiroDisplayProps) {
         <h1 className="text-3xl font-bold">{roteiro.titulo_sugerido || roteiro.titulo}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <Badge variant="secondary">{roteiro.modo.toUpperCase()}</Badge>
-          {roteiro.nicho && <Badge variant="outline">{roteiro.nicho}</Badge>}
+          {roteiro.nicho && (
+            <Badge variant="outline">{NICHOS_LABELS[roteiro.nicho] || roteiro.nicho}</Badge>
+          )}
           {roteiro.duracao_minutos && (
             <Badge variant="outline">{roteiro.duracao_minutos} min</Badge>
           )}
-          <Badge variant="outline">{roteiro.template}</Badge>
+          <Badge variant="outline">{TEMPLATES_LABELS[roteiro.template] || roteiro.template}</Badge>
         </div>
         <p className="text-sm text-muted-foreground mt-2">{createdAt}</p>
       </div>
@@ -109,6 +112,12 @@ export function RoteiroDisplay({ roteiro }: RoteiroDisplayProps) {
         <Button onClick={downloadRoteiro} variant="outline" size="sm">
           <Download className="h-4 w-4 mr-2" />
           Baixar
+        </Button>
+        <Button asChild variant="default" size="sm">
+          <Link href="/create">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Roteiro
+          </Link>
         </Button>
       </div>
 

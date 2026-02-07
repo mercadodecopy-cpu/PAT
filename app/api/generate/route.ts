@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
   // Process in background
   ;(async () => {
     const reader = claudeStream.getReader()
+    let success = false
     try {
       while (true) {
         const { done, value } = await reader.read()
@@ -118,6 +119,7 @@ export async function POST(req: NextRequest) {
               try {
                 const data = JSON.parse(line.slice(6))
                 if (data.type === 'done') {
+                  success = true
                   const tempoGeracao = Math.floor((Date.now() - startTime) / 1000)
                   const parsedOutput = parseRoteiroOutput(data.content)
 
@@ -154,6 +156,33 @@ export async function POST(req: NextRequest) {
             }
           }
         }
+
+        // Check if Claude stream sent an error event
+        if (text.includes('"type":"error"')) {
+          const lines = text.split('\n')
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                if (data.type === 'error') {
+                  // Log failed usage
+                  await supabase.from('usage_logs').insert({
+                    user_id: user.id,
+                    operacao: 'generate' as const,
+                    modo: mode,
+                    tokens_input: 0,
+                    tokens_output: 0,
+                    custo_estimado_usd: 0,
+                    sucesso: false,
+                    erro_mensagem: data.error,
+                  })
+                }
+              } catch {
+                // skip
+              }
+            }
+          }
+        }
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro na geração'
@@ -173,10 +202,12 @@ export async function POST(req: NextRequest) {
         erro_mensagem: message,
       })
     } finally {
-      // Send roteiroId as last event
-      await writer.write(
-        encoder.encode(`data: ${JSON.stringify({ type: 'roteiroId', id: roteiroId })}\n\n`)
-      )
+      // Only send roteiroId if generation was successful
+      if (success) {
+        await writer.write(
+          encoder.encode(`data: ${JSON.stringify({ type: 'roteiroId', id: roteiroId })}\n\n`)
+        )
+      }
       await writer.close()
     }
   })()
@@ -195,24 +226,53 @@ function parseRoteiroOutput(content: string) {
   let descricao: string | null = null
   let capitulos: Array<{ titulo: string; timestamp: string }> | null = null
 
-  // Extract suggested title
-  const tituloMatch = content.match(/T[ÍI]TULO\s*(?:SUGERIDO)?[:\s]+(.+)/i)
-  if (tituloMatch) {
-    tituloSugerido = tituloMatch[1].trim().replace(/^["']|["']$/g, '')
+  // Extract suggested title — try multiple patterns
+  const tituloPatterns = [
+    /T[ÍI]TULO\s*(?:SUGERIDO)?[:\s]+["']?(.+?)["']?\s*$/im,
+    /^#\s+(.+)$/m,
+    /^##\s+(.+)$/m,
+  ]
+  for (const pattern of tituloPatterns) {
+    const match = content.match(pattern)
+    if (match) {
+      tituloSugerido = match[1].trim().replace(/^["']|["']$/g, '').replace(/\*\*/g, '')
+      break
+    }
   }
 
-  // Extract description
-  const descricaoMatch = content.match(/DESCRI[ÇC][ÃA]O[:\s]+([^\n]+(?:\n(?!\n|CAP[ÍI]TULOS)[^\n]+)*)/i)
-  if (descricaoMatch) {
-    descricao = descricaoMatch[1].trim()
+  // Extract description — try multiple patterns
+  const descPatterns = [
+    /DESCRI[ÇC][ÃA]O[:\s]+([^\n]+(?:\n(?!\n|CAP[ÍI]TULOS|##|\[)[^\n]+)*)/i,
+    />\s*(.{20,})/,
+  ]
+  for (const pattern of descPatterns) {
+    const match = content.match(pattern)
+    if (match) {
+      descricao = match[1].trim()
+      break
+    }
   }
 
-  // Extract chapters
-  const chapterMatches = content.matchAll(/\[(\d+:\d+(?::\d+)?)\]\s*(.+)/g)
+  // Extract chapters — try timestamps first, then markdown headers
+  const timestampMatches = content.matchAll(/\[(\d+:\d+(?::\d+)?(?:\s*-\s*\d+:\d+(?::\d+)?)?)\]\s*(.+)/g)
   const chapters: Array<{ titulo: string; timestamp: string }> = []
-  for (const match of chapterMatches) {
-    chapters.push({ timestamp: match[1], titulo: match[2].trim() })
+  for (const match of timestampMatches) {
+    chapters.push({ timestamp: match[1], titulo: match[2].trim().replace(/\*\*/g, '') })
   }
+
+  // Fallback: extract ## headers as chapters (for markdown/bullets templates)
+  if (chapters.length === 0) {
+    const headerMatches = content.matchAll(/^##\s+(?:(?:SE[ÇC][ÃA]O|PARTE|CAP[ÍI]TULO)\s*\d*[:\s]*)?(.+)$/gim)
+    let index = 0
+    for (const match of headerMatches) {
+      const titulo = match[1].trim().replace(/\*\*/g, '')
+      if (titulo.length > 2) {
+        chapters.push({ timestamp: String(index), titulo })
+        index++
+      }
+    }
+  }
+
   if (chapters.length > 0) {
     capitulos = chapters
   }
