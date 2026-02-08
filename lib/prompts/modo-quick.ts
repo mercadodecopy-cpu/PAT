@@ -2,15 +2,20 @@ import { getTemplateInstructions, getNichoInstructions } from './helpers'
 
 interface QuickInputs {
   titulo: string
+  contexto?: string
   duracao: number
   nicho: string
   template: string
 }
 
 export function buildQuickPrompt(inputs: QuickInputs): string {
+  const contextoBlock = inputs.contexto?.trim()
+    ? `\nCONTEXTO / EXPECTATIVA DO CRIADOR: ${inputs.contexto.trim()}\n`
+    : ''
+
   return `Gere um roteiro com as seguintes especificações:
 
-TÍTULO/TEMA: ${inputs.titulo}
+TÍTULO/TEMA: ${inputs.titulo}${contextoBlock}
 DURAÇÃO: ${inputs.duracao} minutos
 NICHO: ${inputs.nicho}
 FORMATO DE OUTPUT: ${inputs.template}

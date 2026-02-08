@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { GeneratingState } from '@/components/GeneratingState'
+import { useGenerate } from '@/hooks/useGenerate'
 import {
   NICHOS_LABELS,
   NICHO_GROUPS,
@@ -28,104 +29,25 @@ import {
 } from '@/lib/validations/generate'
 
 export default function QuickPage() {
-  const router = useRouter()
   const [titulo, setTitulo] = useState('')
+  const [contexto, setContexto] = useState('')
   const [duracao, setDuracao] = useState<string>('')
   const [nicho, setNicho] = useState<string>('')
   const [template, setTemplate] = useState('padrao')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [streamedText, setStreamedText] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const { isGenerating, streamedText, error, generate } = useGenerate()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-
-    if (!titulo.trim() || !duracao || !nicho) {
-      setError('Preencha todos os campos obrigatorios.')
-      return
-    }
-
-    setIsGenerating(true)
-    setStreamedText('')
-
-    let roteiroId: string | null = null
-
-    try {
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode: 'quick',
-          inputs: {
-            titulo: titulo.trim(),
-            duracao: Number(duracao),
-            nicho,
-          },
-          template,
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Erro ao gerar roteiro')
-      }
-
-      // Read SSE stream
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('Stream não disponível')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        // Keep the last potentially incomplete line in the buffer
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const jsonStr = line.slice(6).trim()
-          if (!jsonStr) continue
-
-          let data: { type: string; text?: string; error?: string; id?: string; content?: string }
-          try {
-            data = JSON.parse(jsonStr)
-          } catch {
-            // Skip unparseable lines (incomplete JSON chunks)
-            continue
-          }
-
-          if (data.type === 'text') {
-            setStreamedText((prev) => prev + data.text)
-          } else if (data.type === 'error') {
-            throw new Error(data.error || 'Erro na geração')
-          } else if (data.type === 'roteiroId') {
-            roteiroId = data.id || null
-          } else if (data.type === 'done') {
-            // Generation complete - roteiroId should already be set
-          }
-        }
-      }
-
-      // Redirect to roteiro page
-      if (roteiroId) {
-        router.push(`/roteiro/${roteiroId}`)
-      } else {
-        throw new Error('Roteiro gerado mas ID não foi recebido. Verifique seu histórico.')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
-    } finally {
-      // Always reset generating state (unless we're redirecting)
-      if (!roteiroId) {
-        setIsGenerating(false)
-      }
-    }
+    await generate({
+      mode: 'quick',
+      inputs: {
+        titulo: titulo.trim(),
+        contexto: contexto.trim() || undefined,
+        duracao: Number(duracao),
+        nicho,
+      },
+      template,
+    })
   }
 
   if (isGenerating) {
@@ -150,8 +72,7 @@ export default function QuickPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Modo Quick</CardTitle>
           <CardDescription>
-            Gere um roteiro funcional em 2-3 minutos. Preencha os 3 campos obrigatorios e clique em
-            gerar.
+            Gere um roteiro funcional em 2-3 minutos. Preencha os campos e clique em gerar.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,6 +89,20 @@ export default function QuickPage() {
                 required
                 minLength={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contexto">Contexto / O que voce espera</Label>
+              <Textarea
+                id="contexto"
+                value={contexto}
+                onChange={(e) => setContexto(e.target.value)}
+                placeholder="Ex: Quero focar na mentalidade competitiva dele e como isso se aplica a negocios..."
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Opcional. Descreva o que espera do roteiro, angulo desejado ou informacoes extras.
+              </p>
             </div>
 
             <div className="space-y-2">

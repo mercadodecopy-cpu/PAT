@@ -8,6 +8,7 @@ import {
 
 interface AdvancedInputs {
   titulo: string
+  contexto?: string
   duracao: number
   nicho: string
   publico: string
@@ -17,9 +18,13 @@ interface AdvancedInputs {
 }
 
 export function buildAdvancedPrompt(inputs: AdvancedInputs): string {
+  const contextoBlock = inputs.contexto?.trim()
+    ? `\nCONTEXTO / EXPECTATIVA DO CRIADOR: ${inputs.contexto.trim()}\n`
+    : ''
+
   return `Gere um roteiro COMPLETO com as seguintes especificações:
 
-TÍTULO/TEMA: ${inputs.titulo}
+TÍTULO/TEMA: ${inputs.titulo}${contextoBlock}
 DURAÇÃO: ${inputs.duracao} minutos
 NICHO: ${inputs.nicho}
 PÚBLICO-ALVO: ${inputs.publico}

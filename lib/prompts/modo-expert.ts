@@ -8,6 +8,7 @@ import {
 
 interface ExpertInputs {
   titulo: string
+  contexto?: string
   duracao: number
   nicho: string
   publico: string
@@ -23,10 +24,14 @@ interface ExpertInputs {
 export function buildExpertPrompt(inputs: ExpertInputs): string {
   const sections: string[] = []
 
+  const contextoLine = inputs.contexto?.trim()
+    ? `\n- Contexto/Expectativa: ${inputs.contexto.trim()}`
+    : ''
+
   sections.push(`Gere um roteiro EXPERT com controle total sobre cada elemento:
 
 ESPECIFICAÇÕES BÁSICAS:
-- Título/Tema: ${inputs.titulo}
+- Título/Tema: ${inputs.titulo}${contextoLine}
 - Duração: ${inputs.duracao} minutos
 - Nicho: ${inputs.nicho}
 - Público-alvo: ${inputs.publico}

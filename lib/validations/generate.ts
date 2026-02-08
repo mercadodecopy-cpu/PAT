@@ -221,6 +221,7 @@ export const quickGenerateSchema = z.object({
   mode: z.literal('quick'),
   inputs: z.object({
     titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+    contexto: z.string().optional().default(''),
     duracao: z.number().refine((v) => DURACOES.includes(v as typeof DURACOES[number]), {
       message: 'Duração inválida',
     }),
@@ -233,6 +234,7 @@ export const advancedGenerateSchema = z.object({
   mode: z.literal('advanced'),
   inputs: z.object({
     titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+    contexto: z.string().optional().default(''),
     duracao: z.number().refine((v) => DURACOES.includes(v as typeof DURACOES[number]), {
       message: 'Duração inválida',
     }),
@@ -248,6 +250,7 @@ export const expertGenerateSchema = z.object({
   mode: z.literal('expert'),
   inputs: z.object({
     titulo: z.string().min(3, 'Título deve ter pelo menos 3 caracteres'),
+    contexto: z.string().optional().default(''),
     duracao: z.number().refine((v) => DURACOES.includes(v as typeof DURACOES[number]), {
       message: 'Duração inválida',
     }),
