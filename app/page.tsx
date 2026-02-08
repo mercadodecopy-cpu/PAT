@@ -74,8 +74,8 @@ export default function LandingPage() {
               desc: 'Base de conhecimento destilada de analises profundas de roteiros de alta performance.',
             },
             {
-              title: '6 nichos cobertos',
-              desc: 'Crime, ciencia, historia, transformacao pessoal, laboratorio e projetos epicos.',
+              title: '41+ nichos cobertos',
+              desc: 'De crime e ciencia a gaming e mitologia — cobertura ampla com instrucoes especializadas por nicho.',
             },
             {
               title: '4 modos de geracao',
