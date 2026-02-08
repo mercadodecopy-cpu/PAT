@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { UserNav } from '@/components/UserNav'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export default async function Header() {
   const supabase = await createClient()
@@ -16,7 +17,7 @@ export default async function Header() {
           <span className="text-xl font-bold">RoteiroIA</span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2">
           {user ? (
             <>
               <Link href="/create">
@@ -29,6 +30,7 @@ export default async function Header() {
                   Historico
                 </Button>
               </Link>
+              <ThemeToggle />
               <UserNav user={user} />
             </>
           ) : (
@@ -41,6 +43,7 @@ export default async function Header() {
               <Link href="/signup">
                 <Button size="sm">Criar conta</Button>
               </Link>
+              <ThemeToggle />
             </>
           )}
         </nav>

@@ -16,9 +16,8 @@ export default function CreatePage() {
           icon={<MessageCircle className="h-6 w-6" />}
           title="Modo Livre"
           description="Conversacional - Faco perguntas, voce responde. Ideal para iniciantes."
-          badge="Em breve"
+          badge="Novo"
           href="/create/livre"
-          disabled
         />
         <ModeCard
           icon={<Zap className="h-6 w-6" />}
