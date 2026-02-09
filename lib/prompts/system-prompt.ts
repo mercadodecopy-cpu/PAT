@@ -1,14 +1,21 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-// Carrega PRINCIPIOS_DESTILADOS_v2.md uma vez no module scope
-const PRINCIPIOS_V2 = readFileSync(
-  join(process.cwd(), 'data', 'PRINCIPIOS_DESTILADOS_v2.md'),
-  'utf-8'
-)
+// Cache em memória — carregado lazy na primeira chamada
+let _principiosCache: string | null = null
+
+function loadPrincipios(): string {
+  if (!_principiosCache) {
+    _principiosCache = readFileSync(
+      join(process.cwd(), 'data', 'PRINCIPIOS_DESTILADOS_v2.md'),
+      'utf-8'
+    )
+  }
+  return _principiosCache
+}
 
 export function buildSystemPrompt(): string {
-  return `${PRINCIPIOS_V2}
+  return `${loadPrincipios()}
 
 ## INSTRUÇÕES OPERACIONAIS
 
