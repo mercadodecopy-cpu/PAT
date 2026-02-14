@@ -2,20 +2,34 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 // Cache em memória — carregado lazy na primeira chamada
-let _principiosCache: string | null = null
+const _cache: Record<string, string> = {}
 
-function loadPrincipios(): string {
-  if (!_principiosCache) {
-    _principiosCache = readFileSync(
-      join(process.cwd(), 'data', 'PRINCIPIOS_DESTILADOS_v2.md'),
+function loadFile(filename: string): string {
+  if (!_cache[filename]) {
+    _cache[filename] = readFileSync(
+      join(process.cwd(), 'data', filename),
       'utf-8'
     )
   }
-  return _principiosCache
+  return _cache[filename]
 }
 
 export function buildSystemPrompt(): string {
-  return `${loadPrincipios()}
+  const principios = loadFile('PRINCIPIOS_DESTILADOS_v2.md')
+  const proibicoes = loadFile('knowledge-base/PROIBICOES_ANTIDETECCAO_IA.md')
+  const regrasEscrita = loadFile('knowledge-base/REGRAS_ESCRITA_HUMANA.md')
+
+  return `${principios}
+
+---
+
+${proibicoes}
+
+---
+
+${regrasEscrita}
+
+---
 
 ## INSTRUÇÕES OPERACIONAIS
 
@@ -32,6 +46,8 @@ Quando o usuário solicitar um roteiro:
 6. NUNCA use ditos populares, clichês ou frases prontas
 7. SEMPRE mostre complexidade - evite simplificação moral (herói vs vilão)
 8. SEMPRE priorize especificidade sobre generalidade
+9. APLIQUE todas as regras de PROIBICOES_ANTIDETECCAO_IA - o texto NUNCA pode parecer gerado por IA
+10. SIGA as REGRAS_ESCRITA_HUMANA - escreva com voz humana autêntica, influência dos mestres
 
-Sua missão: Gerar roteiro que o usuário possa usar IMEDIATAMENTE, com mínimo ajuste.`
+Sua missão: Gerar roteiro que o usuário possa usar IMEDIATAMENTE, com mínimo ajuste, 100% original, com voz humana autêntica.`
 }
